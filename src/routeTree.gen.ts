@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WriteoffsRouteImport } from './routes/writeoffs'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as StatementRouteImport } from './routes/statement'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SettlementsRouteImport } from './routes/settlements'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as InboxRouteImport } from './routes/inbox'
@@ -41,6 +42,11 @@ const WorkspaceRoute = WorkspaceRouteImport.update({
 const StatementRoute = StatementRouteImport.update({
   id: '/statement',
   path: '/statement',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettlementsRoute = SettlementsRouteImport.update({
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof InboxRoute
   '/reports': typeof ReportsRoute
   '/settlements': typeof SettlementsRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/statement': typeof StatementRoute
   '/workspace': typeof WorkspaceRoute
   '/writeoffs': typeof WriteoffsRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/reports': typeof ReportsRoute
   '/settlements': typeof SettlementsRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/statement': typeof StatementRoute
   '/workspace': typeof WorkspaceRoute
   '/writeoffs': typeof WriteoffsRoute
@@ -171,6 +179,7 @@ export interface FileRoutesById {
   '/inbox': typeof InboxRoute
   '/reports': typeof ReportsRoute
   '/settlements': typeof SettlementsRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/statement': typeof StatementRoute
   '/workspace': typeof WorkspaceRoute
   '/writeoffs': typeof WriteoffsRoute
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/reports'
     | '/settlements'
+    | '/sitemap.xml'
     | '/statement'
     | '/workspace'
     | '/writeoffs'
@@ -213,6 +223,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/reports'
     | '/settlements'
+    | '/sitemap.xml'
     | '/statement'
     | '/workspace'
     | '/writeoffs'
@@ -233,6 +244,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/reports'
     | '/settlements'
+    | '/sitemap.xml'
     | '/statement'
     | '/workspace'
     | '/writeoffs'
@@ -254,6 +266,7 @@ export interface RootRouteChildren {
   InboxRoute: typeof InboxRoute
   ReportsRoute: typeof ReportsRoute
   SettlementsRoute: typeof SettlementsRouteWithChildren
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatementRoute: typeof StatementRoute
   WorkspaceRoute: typeof WorkspaceRoute
   WriteoffsRoute: typeof WriteoffsRoute
@@ -283,6 +296,13 @@ declare module '@tanstack/react-router' {
       path: '/statement'
       fullPath: '/statement'
       preLoaderRoute: typeof StatementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settlements': {
@@ -427,6 +447,7 @@ const rootRouteChildren: RootRouteChildren = {
   InboxRoute: InboxRoute,
   ReportsRoute: ReportsRoute,
   SettlementsRoute: SettlementsRouteWithChildren,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatementRoute: StatementRoute,
   WorkspaceRoute: WorkspaceRoute,
   WriteoffsRoute: WriteoffsRoute,
