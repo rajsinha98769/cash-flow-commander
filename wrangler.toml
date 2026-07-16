@@ -1,0 +1,9 @@
+name = "cash-flow-commander"
+main = ".output/server/index.mjs"
+compatibility_date = "2026-07-07"
+
+[vars]
+NODE_ENV = "production"
+
+# Do NOT put secrets here — use `wrangler secret put` for those
+
