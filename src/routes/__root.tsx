@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  redirect,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -11,6 +12,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { me } from "../lib/api/auth";
+import type { User } from "../lib/types";
 
 function NotFoundComponent() {
   return (
@@ -72,7 +75,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient; user: User | null }>()({
+  beforeLoad: async ({ location }) => {
+    const user = await me();
+    if (!user && location.pathname !== "/login") {
+      throw redirect({ to: "/login", search: { redirect: location.pathname } });
+    }
+    if (user && location.pathname === "/login") {
+      throw redirect({ to: "/" });
+    }
+    return { user };
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },

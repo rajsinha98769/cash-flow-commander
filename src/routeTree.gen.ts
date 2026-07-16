@@ -15,6 +15,7 @@ import { Route as StatementRouteImport } from './routes/statement'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SettlementsRouteImport } from './routes/settlements'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as FollowupsRouteImport } from './routes/followups'
 import { Route as DisputesRouteImport } from './routes/disputes'
@@ -23,10 +24,12 @@ import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AgingRouteImport } from './routes/aging'
 import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ClientsIndexRouteImport } from './routes/clients.index'
 import { Route as SettlementsPartialRouteImport } from './routes/settlements.partial'
 import { Route as PaymentsNewRouteImport } from './routes/payments.new'
 import { Route as PaymentsAllocateRouteImport } from './routes/payments.allocate'
 import { Route as InvoicesIdRouteImport } from './routes/invoices.$id'
+import { Route as FilesSplatRouteImport } from './routes/files.$'
 import { Route as ClientsIdRouteImport } from './routes/clients.$id'
 
 const WriteoffsRoute = WriteoffsRouteImport.update({
@@ -57,6 +60,11 @@ const SettlementsRoute = SettlementsRouteImport.update({
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InboxRoute = InboxRouteImport.update({
@@ -99,6 +107,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientsIndexRoute = ClientsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ClientsRoute,
+} as any)
 const SettlementsPartialRoute = SettlementsPartialRouteImport.update({
   id: '/partial',
   path: '/partial',
@@ -119,6 +132,11 @@ const InvoicesIdRoute = InvoicesIdRouteImport.update({
   path: '/invoices/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FilesSplatRoute = FilesSplatRouteImport.update({
+  id: '/files/$',
+  path: '/files/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClientsIdRoute = ClientsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -134,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/disputes': typeof DisputesRoute
   '/followups': typeof FollowupsRoute
   '/inbox': typeof InboxRoute
+  '/login': typeof LoginRoute
   '/reports': typeof ReportsRoute
   '/settlements': typeof SettlementsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -141,20 +160,22 @@ export interface FileRoutesByFullPath {
   '/workspace': typeof WorkspaceRoute
   '/writeoffs': typeof WriteoffsRoute
   '/clients/$id': typeof ClientsIdRoute
+  '/files/$': typeof FilesSplatRoute
   '/invoices/$id': typeof InvoicesIdRoute
   '/payments/allocate': typeof PaymentsAllocateRoute
   '/payments/new': typeof PaymentsNewRoute
   '/settlements/partial': typeof SettlementsPartialRoute
+  '/clients/': typeof ClientsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
   '/aging': typeof AgingRoute
   '/analytics': typeof AnalyticsRoute
-  '/clients': typeof ClientsRouteWithChildren
   '/disputes': typeof DisputesRoute
   '/followups': typeof FollowupsRoute
   '/inbox': typeof InboxRoute
+  '/login': typeof LoginRoute
   '/reports': typeof ReportsRoute
   '/settlements': typeof SettlementsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -162,10 +183,12 @@ export interface FileRoutesByTo {
   '/workspace': typeof WorkspaceRoute
   '/writeoffs': typeof WriteoffsRoute
   '/clients/$id': typeof ClientsIdRoute
+  '/files/$': typeof FilesSplatRoute
   '/invoices/$id': typeof InvoicesIdRoute
   '/payments/allocate': typeof PaymentsAllocateRoute
   '/payments/new': typeof PaymentsNewRoute
   '/settlements/partial': typeof SettlementsPartialRoute
+  '/clients': typeof ClientsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -177,6 +200,7 @@ export interface FileRoutesById {
   '/disputes': typeof DisputesRoute
   '/followups': typeof FollowupsRoute
   '/inbox': typeof InboxRoute
+  '/login': typeof LoginRoute
   '/reports': typeof ReportsRoute
   '/settlements': typeof SettlementsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -184,10 +208,12 @@ export interface FileRoutesById {
   '/workspace': typeof WorkspaceRoute
   '/writeoffs': typeof WriteoffsRoute
   '/clients/$id': typeof ClientsIdRoute
+  '/files/$': typeof FilesSplatRoute
   '/invoices/$id': typeof InvoicesIdRoute
   '/payments/allocate': typeof PaymentsAllocateRoute
   '/payments/new': typeof PaymentsNewRoute
   '/settlements/partial': typeof SettlementsPartialRoute
+  '/clients/': typeof ClientsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -200,6 +226,7 @@ export interface FileRouteTypes {
     | '/disputes'
     | '/followups'
     | '/inbox'
+    | '/login'
     | '/reports'
     | '/settlements'
     | '/sitemap.xml'
@@ -207,20 +234,22 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/writeoffs'
     | '/clients/$id'
+    | '/files/$'
     | '/invoices/$id'
     | '/payments/allocate'
     | '/payments/new'
     | '/settlements/partial'
+    | '/clients/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/activity'
     | '/aging'
     | '/analytics'
-    | '/clients'
     | '/disputes'
     | '/followups'
     | '/inbox'
+    | '/login'
     | '/reports'
     | '/settlements'
     | '/sitemap.xml'
@@ -228,10 +257,12 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/writeoffs'
     | '/clients/$id'
+    | '/files/$'
     | '/invoices/$id'
     | '/payments/allocate'
     | '/payments/new'
     | '/settlements/partial'
+    | '/clients'
   id:
     | '__root__'
     | '/'
@@ -242,6 +273,7 @@ export interface FileRouteTypes {
     | '/disputes'
     | '/followups'
     | '/inbox'
+    | '/login'
     | '/reports'
     | '/settlements'
     | '/sitemap.xml'
@@ -249,10 +281,12 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/writeoffs'
     | '/clients/$id'
+    | '/files/$'
     | '/invoices/$id'
     | '/payments/allocate'
     | '/payments/new'
     | '/settlements/partial'
+    | '/clients/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -264,12 +298,14 @@ export interface RootRouteChildren {
   DisputesRoute: typeof DisputesRoute
   FollowupsRoute: typeof FollowupsRoute
   InboxRoute: typeof InboxRoute
+  LoginRoute: typeof LoginRoute
   ReportsRoute: typeof ReportsRoute
   SettlementsRoute: typeof SettlementsRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatementRoute: typeof StatementRoute
   WorkspaceRoute: typeof WorkspaceRoute
   WriteoffsRoute: typeof WriteoffsRoute
+  FilesSplatRoute: typeof FilesSplatRoute
   InvoicesIdRoute: typeof InvoicesIdRoute
   PaymentsAllocateRoute: typeof PaymentsAllocateRoute
   PaymentsNewRoute: typeof PaymentsNewRoute
@@ -317,6 +353,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inbox': {
@@ -375,6 +418,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clients/': {
+      id: '/clients/'
+      path: '/'
+      fullPath: '/clients/'
+      preLoaderRoute: typeof ClientsIndexRouteImport
+      parentRoute: typeof ClientsRoute
+    }
     '/settlements/partial': {
       id: '/settlements/partial'
       path: '/partial'
@@ -403,6 +453,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InvoicesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/files/$': {
+      id: '/files/$'
+      path: '/files/$'
+      fullPath: '/files/$'
+      preLoaderRoute: typeof FilesSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clients/$id': {
       id: '/clients/$id'
       path: '/$id'
@@ -415,10 +472,12 @@ declare module '@tanstack/react-router' {
 
 interface ClientsRouteChildren {
   ClientsIdRoute: typeof ClientsIdRoute
+  ClientsIndexRoute: typeof ClientsIndexRoute
 }
 
 const ClientsRouteChildren: ClientsRouteChildren = {
   ClientsIdRoute: ClientsIdRoute,
+  ClientsIndexRoute: ClientsIndexRoute,
 }
 
 const ClientsRouteWithChildren =
@@ -445,12 +504,14 @@ const rootRouteChildren: RootRouteChildren = {
   DisputesRoute: DisputesRoute,
   FollowupsRoute: FollowupsRoute,
   InboxRoute: InboxRoute,
+  LoginRoute: LoginRoute,
   ReportsRoute: ReportsRoute,
   SettlementsRoute: SettlementsRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatementRoute: StatementRoute,
   WorkspaceRoute: WorkspaceRoute,
   WriteoffsRoute: WriteoffsRoute,
+  FilesSplatRoute: FilesSplatRoute,
   InvoicesIdRoute: InvoicesIdRoute,
   PaymentsAllocateRoute: PaymentsAllocateRoute,
   PaymentsNewRoute: PaymentsNewRoute,
@@ -458,3 +519,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

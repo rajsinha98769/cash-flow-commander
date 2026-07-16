@@ -1,86 +1,192 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { AppShell, RiskDot, StatusPill } from "@/components/app-shell";
-import { clients, invoices, paymentHistory, ledgerEntries, activityFeed, fmt } from "@/lib/mock-data";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { AppShell, StatusPill, statusTone, useMe } from "@/components/app-shell";
+import { Modal, Field, inputCls, textareaCls } from "@/components/modal";
+import { InvoiceForm } from "@/components/invoice-form";
+import { PaymentForm } from "@/components/payment-form";
+import { getClientDetail } from "@/lib/api/clients";
+import { convertProforma, writeOffInvoice, deleteInvoice } from "@/lib/api/invoices";
+import { deletePayment } from "@/lib/api/payments";
+import { fmt } from "@/lib/derive";
+import type { InvoiceView } from "@/lib/types";
 import {
-  Phone,
-  Mail,
-  MessageSquare,
-  Calendar,
-  FileText,
   BanknoteArrowUp,
-  SplitSquareHorizontal,
-  AlertOctagon,
+  Plus,
+  Pencil,
+  Trash2,
+  FileWarning,
+  FileCheck2,
   Paperclip,
+  ArrowLeft,
 } from "lucide-react";
-import { useState } from "react";
 
 export const Route = createFileRoute("/clients/$id")({
-  head: ({ params }) => ({
-    meta: [
-      { title: `Client 360 — CollectFlow` },
-      { name: "description", content: `Client Collection 360 workspace for ${params.id}.` },
-    ],
-  }),
+  validateSearch: (s: Record<string, unknown>): { action?: "invoice" | "payment" } =>
+    s.action === "invoice" || s.action === "payment" ? { action: s.action } : {},
+  head: () => ({ meta: [{ title: "Client 360 — CollectFlow" }] }),
   component: Client360,
 });
 
-const TABS = ["Outstanding", "Payments", "Ledger", "Follow-ups", "Documents"] as const;
+const TABS = ["Invoices", "Payments", "Ledger"] as const;
 
 function Client360() {
   const { id } = Route.useParams();
-  const client = clients.find((c) => c.id === id) ?? clients[0];
-  const clientInvoices = invoices.filter((i) => i.clientId === client.id);
-  const [tab, setTab] = useState<(typeof TABS)[number]>("Outstanding");
+  const router = useRouter();
+  const qc = useQueryClient();
+  const { data: user } = useMe();
+  const canEdit = user?.role === "manager";
 
-  return (
-    <AppShell title={client.name} subtitle={`${client.gstin} · ${client.region} region · Collector: ${client.collector}`}>
-      {/* Client header card */}
-      <div className="panel p-6 mb-6">
-        <div className="flex items-start justify-between mb-6 gap-6">
-          <div className="flex items-center gap-4">
-            <div className="size-14 rounded-xl bg-brand/10 text-brand grid place-items-center text-lg font-bold">
-              {client.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <RiskDot risk={client.risk} />
-                <StatusPill tone={client.status === "legal" ? "danger" : client.status === "hold" ? "warning" : "success"}>
-                  {client.status}
-                </StatusPill>
-                <span className="text-[11px] text-muted-foreground">Score: {client.collectionScore}/100</span>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {client.contact} · {client.email} · {client.phone}
-              </div>
-            </div>
-          </div>
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["client", id],
+    queryFn: () => getClientDetail({ data: { id } }),
+    retry: 1,
+  });
+
+  const [tab, setTab] = useState<(typeof TABS)[number]>("Invoices");
+  const [invoiceForm, setInvoiceForm] = useState<{ invoice?: InvoiceView } | null>(null);
+  const [paymentFor, setPaymentFor] = useState<{ preselect?: string } | null>(null);
+  const [writeOff, setWriteOff] = useState<InvoiceView | null>(null);
+  const [convert, setConvert] = useState<InvoiceView | null>(null);
+
+  // Deep-link support: /clients/$id?action=invoice|payment opens the form directly
+  // (used by the quick actions on the Clients list).
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  useEffect(() => {
+    if (!canEdit || !search.action) return;
+    if (search.action === "invoice") setInvoiceForm({});
+    else if (search.action === "payment") setPaymentFor({});
+    navigate({ search: {}, replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.action, canEdit]);
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["client", id] });
+    qc.invalidateQueries({ queryKey: ["clients"] });
+    qc.invalidateQueries({ queryKey: ["dashboard"] });
+  };
+
+  const deleteInvMut = useMutation({
+    mutationFn: (invId: string) => deleteInvoice({ data: { id: invId } }),
+    onSuccess: invalidate,
+  });
+  const deletePayMut = useMutation({
+    mutationFn: (payId: string) => deletePayment({ data: { id: payId } }),
+    onSuccess: invalidate,
+  });
+
+  if (isLoading) {
+    return (
+      <AppShell title="Client">
+        <div className="text-sm text-muted-foreground">Loading…</div>
+      </AppShell>
+    );
+  }
+  if (isError) {
+    return (
+      <AppShell title="Couldn't load client">
+        <div className="panel p-6 max-w-md">
+          <p className="text-sm text-muted-foreground mb-3">
+            {(error as Error)?.message || "Something went wrong loading this client."}
+          </p>
           <div className="flex gap-2">
-            <button className="h-9 px-3 rounded-lg border border-primary/10 bg-card text-xs font-semibold hover:bg-muted inline-flex items-center gap-1.5">
-              <Phone className="size-3.5" /> Call
+            <button
+              onClick={() => refetch()}
+              className="h-9 px-4 rounded-lg bg-brand text-brand-foreground text-sm font-semibold hover:bg-brand/90"
+            >
+              Retry
             </button>
-            <button className="h-9 px-3 rounded-lg border border-primary/10 bg-card text-xs font-semibold hover:bg-muted inline-flex items-center gap-1.5">
-              <Mail className="size-3.5" /> Email
-            </button>
-            <Link to="/payments/new" className="h-9 px-4 rounded-lg bg-brand text-brand-foreground text-xs font-semibold hover:bg-brand/90 inline-flex items-center gap-1.5">
-              <BanknoteArrowUp className="size-3.5" /> Record Payment
+            <Link
+              to="/clients"
+              className="h-9 px-4 rounded-lg border border-primary/10 text-sm font-semibold hover:bg-muted inline-flex items-center gap-1"
+            >
+              <ArrowLeft className="size-4" /> Back to clients
             </Link>
           </div>
         </div>
+      </AppShell>
+    );
+  }
+  if (!data) {
+    return (
+      <AppShell title="Client not found">
+        <Link to="/clients" className="text-brand text-sm font-semibold inline-flex items-center gap-1">
+          <ArrowLeft className="size-4" /> Back to clients
+        </Link>
+      </AppShell>
+    );
+  }
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {[
-            { l: "Current Balance", v: fmt(client.outstanding, 2) },
-            { l: "Total Outstanding", v: fmt(client.outstanding, 2) },
-            { l: "Overdue", v: fmt(client.overdue, 2), tone: "text-danger" },
-            { l: "Advance Balance", v: fmt(client.advance, 2), tone: "text-success" },
-            { l: "Credit Limit", v: fmt(client.creditLimit) },
-          ].map((k) => (
-            <div key={k.l} className="p-3 rounded-lg bg-muted/50">
-              <div className="label-kicker text-[9px] mb-1">{k.l}</div>
-              <div className={`text-lg font-bold tabular-nums ${k.tone ?? ""}`}>{k.v}</div>
-            </div>
-          ))}
+  const { client, invoices, payments, ledger, summary } = data;
+
+  return (
+    <AppShell
+      title={client.name}
+      subtitle={`${client.region || "—"} · ${client.contact || "No contact"}`}
+      actions={
+        canEdit ? (
+          <>
+            <button
+              onClick={() => setInvoiceForm({})}
+              className="px-3 h-9 inline-flex items-center gap-1.5 rounded-lg border border-primary/10 bg-card text-sm font-semibold hover:bg-muted"
+            >
+              <Plus className="size-4" /> Add Entry
+            </button>
+            <button
+              onClick={() => setPaymentFor({})}
+              className="px-4 h-9 inline-flex items-center gap-1.5 rounded-lg bg-brand text-brand-foreground text-sm font-semibold hover:bg-brand/90 shadow-sm"
+            >
+              <BanknoteArrowUp className="size-4" /> Record Payment
+            </button>
+          </>
+        ) : null
+      }
+    >
+      <Link
+        to="/clients"
+        className="text-muted-foreground hover:text-foreground text-xs inline-flex items-center gap-1 mb-4"
+      >
+        <ArrowLeft className="size-3.5" /> All clients
+      </Link>
+
+      {/* Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Stat label="Pending (Outstanding)" value={fmt(summary.outstanding, 2)} tone={summary.outstanding > 0 ? "text-danger" : undefined} />
+        <Stat label="Overdue" value={fmt(summary.overdue, 2)} tone={summary.overdue > 0 ? "text-danger" : undefined} />
+        <Stat label="Received (Collected)" value={fmt(summary.collected, 2)} tone="text-success" />
+        <Stat label="Advance on account" value={fmt(summary.advance, 2)} tone={summary.advance > 0 ? "text-success" : undefined} />
+      </div>
+
+      {/* Client details */}
+      <div className="panel p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-sm">Client Details</h2>
+          <div className="flex items-center gap-2">
+            <StatusPill tone={client.enabled ? "success" : "neutral"}>
+              {client.enabled ? "active" : "disabled"}
+            </StatusPill>
+            <span className="text-[11px] text-muted-foreground">
+              {summary.invoiceCount} invoice{summary.invoiceCount === 1 ? "" : "s"}
+              {summary.proformaCount > 0 ? ` · ${summary.proformaCount} proforma` : ""}
+            </span>
+          </div>
         </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4 text-sm">
+          <Detail label="Contact Person" value={client.contact} />
+          <Detail label="Email" value={client.email} />
+          <Detail label="Phone" value={client.phone} />
+          <Detail label="Region" value={client.region} />
+          <Detail label="Last Payment" value={summary.lastPaymentDate ?? "—"} />
+          <Detail label="Written Off" value={fmt(summary.writtenOff, 2)} />
+          <Detail label="Oldest Pending" value={summary.oldestPendingDays ? `${summary.oldestPendingDays} days` : "—"} />
+        </div>
+        {client.notes ? (
+          <div className="mt-4 pt-4 border-t border-primary/5">
+            <div className="label-kicker text-[9px] mb-1">Notes</div>
+            <div className="text-sm text-muted-foreground whitespace-pre-wrap">{client.notes}</div>
+          </div>
+        ) : null}
       </div>
 
       {/* Tabs */}
@@ -94,168 +200,412 @@ function Client360() {
             }`}
           >
             {t}
+            {t === "Invoices" ? (
+              <span className="ml-1.5 text-[11px] text-muted-foreground">{invoices.length}</span>
+            ) : t === "Payments" ? (
+              <span className="ml-1.5 text-[11px] text-muted-foreground">{payments.length}</span>
+            ) : null}
           </button>
         ))}
       </div>
 
-      {tab === "Outstanding" && (
-        <div className="panel overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-[11px] text-muted-foreground uppercase tracking-wider border-b border-primary/5 bg-muted/40">
-                <th className="p-4 text-left">Invoice #</th>
-                <th className="p-4 text-left">Date</th>
-                <th className="p-4 text-left">Due</th>
-                <th className="p-4 text-right">Amount</th>
-                <th className="p-4 text-right">Paid</th>
-                <th className="p-4 text-right">Balance</th>
-                <th className="p-4 text-left">Status</th>
-                <th className="p-4 text-right">Aging</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clientInvoices.map((inv) => (
-                <tr key={inv.id} className="border-b border-primary/5 hover:bg-muted/30">
-                  <td className="p-4 font-mono text-xs font-semibold">
-                    <Link to="/invoices/$id" params={{ id: inv.id }} className="hover:text-brand">
-                      {inv.number}
-                    </Link>
-                  </td>
-                  <td className="p-4 text-muted-foreground text-xs">{inv.invoiceDate}</td>
-                  <td className="p-4 text-muted-foreground text-xs">{inv.dueDate}</td>
-                  <td className="p-4 text-right tabular-nums">{fmt(inv.amount, 2)}</td>
-                  <td className="p-4 text-right tabular-nums text-success">{fmt(inv.paid, 2)}</td>
-                  <td className="p-4 text-right tabular-nums font-semibold">{fmt(inv.amount - inv.paid, 2)}</td>
-                  <td className="p-4"><StatusPill tone={inv.status === "overdue" ? "danger" : inv.status === "disputed" ? "warning" : inv.status === "partial" ? "brand" : "neutral"}>{inv.status}</StatusPill></td>
-                  <td className={`p-4 text-right text-xs font-medium ${inv.agingDays > 30 ? "text-danger" : "text-warning"}`}>{inv.agingDays}d</td>
-                  <td className="p-4 text-right">
-                    <div className="inline-flex gap-3 text-xs">
-                      <Link to="/payments/new" className="text-brand font-semibold hover:underline inline-flex items-center gap-1"><BanknoteArrowUp className="size-3" />Pay</Link>
-                      <Link to="/payments/allocate" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1"><SplitSquareHorizontal className="size-3" />Split</Link>
-                      <Link to="/disputes" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1"><AlertOctagon className="size-3" />Dispute</Link>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {tab === "Payments" && (
-        <div className="panel p-6">
-          <div className="relative pl-6 space-y-6">
-            <div className="absolute left-2 top-2 bottom-2 w-px bg-primary/10" />
-            {paymentHistory.map((p, i) => (
-              <div key={i} className="relative">
-                <div className="absolute -left-[18px] top-1.5 size-3 rounded-full bg-success ring-4 ring-success/15" />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-sm">{fmt(p.amount, 2)} received via {p.mode}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {p.date} · Ref {p.ref} · Adjusted against {p.against} · {p.collector}
-                    </div>
-                    {p.remarks !== "—" ? <div className="text-xs text-muted-foreground mt-1 italic">{p.remarks}</div> : null}
-                  </div>
-                  <StatusPill tone="success">Cleared</StatusPill>
-                </div>
-              </div>
-            ))}
+      {tab === "Invoices" &&
+        (invoices.length === 0 ? (
+          <div className="panel p-10 text-center text-sm text-muted-foreground">
+            No invoices or proformas yet.
           </div>
-        </div>
-      )}
-
-      {tab === "Ledger" && (
-        <div className="panel overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-[11px] text-muted-foreground uppercase tracking-wider border-b border-primary/5 bg-muted/40">
-                <th className="p-4 text-left">Date</th>
-                <th className="p-4 text-left">Type</th>
-                <th className="p-4 text-left">Description</th>
-                <th className="p-4 text-right">Debit</th>
-                <th className="p-4 text-right">Credit</th>
-                <th className="p-4 text-right">Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ledgerEntries.map((e, i) => (
-                <tr key={i} className={`border-b border-primary/5 hover:bg-muted/30 ${e.type === "Opening" || e.type === "Closing" ? "bg-muted/40 font-semibold" : ""}`}>
-                  <td className="p-4 text-xs">{e.date}</td>
-                  <td className="p-4"><StatusPill tone={e.type === "Payment" ? "success" : e.type === "Invoice" ? "brand" : "neutral"}>{e.type}</StatusPill></td>
-                  <td className="p-4 text-sm">{e.description}</td>
-                  <td className="p-4 text-right tabular-nums">{e.debit ? fmt(e.debit, 2) : "—"}</td>
-                  <td className="p-4 text-right tabular-nums text-success">{e.credit ? fmt(e.credit, 2) : "—"}</td>
-                  <td className="p-4 text-right tabular-nums font-semibold">{fmt(e.balance, 2)}</td>
+        ) : (
+          <div className="panel overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[11px] text-muted-foreground uppercase tracking-wider border-b border-primary/5 bg-muted/40">
+                  <th className="p-3 text-left">Number</th>
+                  <th className="p-3 text-left">Date</th>
+                  <th className="p-3 text-left">Due</th>
+                  <th className="p-3 text-right">Amount</th>
+                  <th className="p-3 text-right">Paid</th>
+                  <th className="p-3 text-right">Balance</th>
+                  <th className="p-3 text-left">Status</th>
+                  {canEdit ? <th className="p-3 text-right">Actions</th> : null}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="border-b border-primary/5 hover:bg-muted/30">
+                    <td className="p-3">
+                      <Link to="/invoices/$id" params={{ id: inv.id }} className="font-mono text-xs font-semibold hover:text-brand">
+                        {inv.number || "(no number)"}
+                      </Link>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {inv.isProforma ? <StatusPill tone="warning">proforma</StatusPill> : null}
+                        {inv.fileName ? (
+                          <a
+                            href={`/files/${inv.filePath}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[11px] text-muted-foreground hover:text-brand inline-flex items-center gap-0.5"
+                          >
+                            <Paperclip className="size-3" /> file
+                          </a>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="p-3 text-muted-foreground text-xs">{inv.invoiceDate || "—"}</td>
+                    <td className="p-3 text-muted-foreground text-xs">
+                      {inv.dueDate || "—"}
+                      {inv.agingDays > 0 && inv.balance > 0 ? (
+                        <span className="text-danger"> · {inv.agingDays}d</span>
+                      ) : null}
+                    </td>
+                    <td className="p-3 text-right tabular-nums">{fmt(inv.amount, 2)}</td>
+                    <td className="p-3 text-right tabular-nums text-success">{fmt(inv.paid, 2)}</td>
+                    <td className="p-3 text-right tabular-nums font-semibold">{fmt(inv.balance, 2)}</td>
+                    <td className="p-3">
+                      <StatusPill tone={statusTone(inv.status)}>{inv.status}</StatusPill>
+                    </td>
+                    {canEdit ? (
+                      <td className="p-3">
+                        <div className="flex items-center justify-end gap-1">
+                          {inv.balance > 0 && !inv.writtenOff ? (
+                            <IconBtn title="Record payment" onClick={() => setPaymentFor({ preselect: inv.id })}>
+                              <BanknoteArrowUp className="size-3.5" />
+                            </IconBtn>
+                          ) : null}
+                          {inv.isProforma && inv.balance <= 0.005 ? (
+                            <IconBtn title="Generate invoice from proforma" tone="brand" onClick={() => setConvert(inv)}>
+                              <FileCheck2 className="size-3.5" />
+                            </IconBtn>
+                          ) : null}
+                          <IconBtn title="Edit" onClick={() => setInvoiceForm({ invoice: inv })}>
+                            <Pencil className="size-3.5" />
+                          </IconBtn>
+                          {!inv.writtenOff && inv.balance > 0 ? (
+                            <IconBtn title="Write off" tone="warning" onClick={() => setWriteOff(inv)}>
+                              <FileWarning className="size-3.5" />
+                            </IconBtn>
+                          ) : null}
+                          <IconBtn
+                            title="Delete"
+                            tone="danger"
+                            onClick={() => {
+                              if (confirm(`Delete ${inv.number || "this entry"}? Allocations will be removed.`))
+                                deleteInvMut.mutate(inv.id);
+                            }}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </IconBtn>
+                        </div>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
 
-      {tab === "Follow-ups" && (
-        <div className="panel p-6">
-          <div className="relative pl-6 space-y-6">
-            <div className="absolute left-2 top-2 bottom-2 w-px bg-primary/10" />
-            {activityFeed.map((a) => {
-              const iconMap = {
-                payment: BanknoteArrowUp,
-                ptp: Calendar,
-                call: Phone,
-                dispute: AlertOctagon,
-                escalation: AlertOctagon,
-                email: Mail,
-                "broken-ptp": AlertOctagon,
-              } as const;
-              const Icon = (iconMap as any)[a.type] ?? MessageSquare;
+      {tab === "Payments" &&
+        (payments.length === 0 ? (
+          <div className="panel p-10 text-center text-sm text-muted-foreground">No payments recorded.</div>
+        ) : (
+          <div className="panel divide-y divide-primary/5">
+            {payments.map((p) => {
+              const allocated = p.allocations.reduce((s, a) => s + a.amount, 0);
+              const advance = p.amount - allocated;
               return (
-                <div key={a.id} className="relative">
-                  <div className={`absolute -left-[22px] top-0 size-6 rounded-full grid place-items-center ${
-                    a.type === "payment" ? "bg-success/15 text-success" :
-                    a.type === "escalation" || a.type === "broken-ptp" ? "bg-danger/15 text-danger" :
-                    "bg-brand/10 text-brand"
-                  }`}>
-                    <Icon className="size-3" />
-                  </div>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-semibold text-sm">{a.text}</div>
-                      <div className="text-xs text-muted-foreground">{a.at} · {a.collector}</div>
+                <div key={p.id} className="p-4 flex items-start justify-between gap-4">
+                  <div>
+                    <div className="font-semibold text-sm">
+                      {fmt(p.amount, 2)} via {p.mode}
+                      {p.reference ? <span className="text-muted-foreground font-normal"> · {p.reference}</span> : null}
                     </div>
-                    <StatusPill tone="neutral">{a.type}</StatusPill>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {p.paymentDate}
+                      {p.bank ? ` · ${p.bank}` : ""} · {p.allocations.length} invoice
+                      {p.allocations.length === 1 ? "" : "s"} settled
+                      {advance > 0.005 ? ` · ${fmt(advance, 2)} advance` : ""}
+                    </div>
+                    {p.notes ? <div className="text-xs text-muted-foreground mt-1 italic">{p.notes}</div> : null}
+                    {p.fileName ? (
+                      <a
+                        href={`/files/${p.filePath}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] text-brand hover:underline inline-flex items-center gap-1 mt-1"
+                      >
+                        <Paperclip className="size-3" /> {p.fileName}
+                      </a>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <StatusPill tone="success">received</StatusPill>
+                    {canEdit ? (
+                      <IconBtn
+                        title="Delete payment"
+                        tone="danger"
+                        onClick={() => {
+                          if (confirm("Delete this payment? Balances will be recalculated.")) deletePayMut.mutate(p.id);
+                        }}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </IconBtn>
+                    ) : null}
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
-      )}
+        ))}
 
-      {tab === "Documents" && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {[
-            { name: "INV-9021.pdf", type: "Invoice PDF", size: "142 KB", icon: FileText },
-            { name: "IMPS-445120.pdf", type: "Payment Proof", size: "88 KB", icon: Paperclip },
-            { name: "Statement-Jun26.pdf", type: "Statement", size: "310 KB", icon: FileText },
-            { name: "PO-8823.pdf", type: "Supporting", size: "212 KB", icon: FileText },
-            { name: "email-thread.eml", type: "Email Attachment", size: "34 KB", icon: Mail },
-            { name: "CN-0142.pdf", type: "Credit Note", size: "58 KB", icon: FileText },
-          ].map((d) => (
-            <div key={d.name} className="panel p-4 flex items-center gap-3 hover:border-brand/30 transition-colors">
-              <div className="size-10 rounded-lg bg-muted grid place-items-center">
-                <d.icon className="size-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold truncate">{d.name}</div>
-                <div className="text-[11px] text-muted-foreground">{d.type} · {d.size}</div>
-              </div>
-              <button className="text-xs font-semibold text-brand hover:underline">View</button>
-            </div>
-          ))}
-        </div>
-      )}
+      {tab === "Ledger" &&
+        (ledger.length === 0 ? (
+          <div className="panel p-10 text-center text-sm text-muted-foreground">No ledger activity.</div>
+        ) : (
+          <div className="panel overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[11px] text-muted-foreground uppercase tracking-wider border-b border-primary/5 bg-muted/40">
+                  <th className="p-3 text-left">Date</th>
+                  <th className="p-3 text-left">Type</th>
+                  <th className="p-3 text-left">Description</th>
+                  <th className="p-3 text-right">Debit</th>
+                  <th className="p-3 text-right">Credit</th>
+                  <th className="p-3 text-right">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ledger.map((e, i) => (
+                  <tr key={i} className="border-b border-primary/5 hover:bg-muted/30">
+                    <td className="p-3 text-xs">{e.date}</td>
+                    <td className="p-3">
+                      <StatusPill tone={e.type === "Payment" ? "success" : e.type === "Write-off" ? "warning" : "brand"}>
+                        {e.type}
+                      </StatusPill>
+                    </td>
+                    <td className="p-3 text-sm">{e.description}</td>
+                    <td className="p-3 text-right tabular-nums">{e.debit ? fmt(e.debit, 2) : "—"}</td>
+                    <td className="p-3 text-right tabular-nums text-success">{e.credit ? fmt(e.credit, 2) : "—"}</td>
+                    <td className="p-3 text-right tabular-nums font-semibold">{fmt(e.balance, 2)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-muted/40 font-semibold">
+                  <td className="p-3" colSpan={5}>
+                    Closing Balance (outstanding)
+                  </td>
+                  <td className="p-3 text-right tabular-nums">{fmt(summary.outstanding, 2)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ))}
+
+      {/* Modals */}
+      {invoiceForm ? (
+        <InvoiceForm
+          clientId={id}
+          invoice={invoiceForm.invoice}
+          open
+          onClose={() => setInvoiceForm(null)}
+        />
+      ) : null}
+      {paymentFor ? (
+        <PaymentForm
+          clientId={id}
+          invoices={invoices}
+          preselectInvoiceId={paymentFor.preselect}
+          open
+          onClose={() => setPaymentFor(null)}
+        />
+      ) : null}
+
+      <WriteOffModal invoice={writeOff} onClose={() => setWriteOff(null)} onDone={invalidate} />
+      <ConvertModal invoice={convert} onClose={() => setConvert(null)} onDone={invalidate} router={router} />
     </AppShell>
+  );
+}
+
+function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  return (
+    <div className="panel p-4">
+      <div className="label-kicker text-[9px] mb-1">{label}</div>
+      <div className={`text-lg font-bold tabular-nums ${tone ?? ""}`}>{value}</div>
+    </div>
+  );
+}
+
+function Detail({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <div className="label-kicker text-[9px] mb-0.5">{label}</div>
+      <div className={`text-sm ${value ? "" : "text-muted-foreground"} ${mono ? "font-mono text-xs" : ""}`}>
+        {value || "—"}
+      </div>
+    </div>
+  );
+}
+
+function IconBtn({
+  children,
+  title,
+  onClick,
+  tone,
+}: {
+  children: React.ReactNode;
+  title: string;
+  onClick: () => void;
+  tone?: "danger" | "warning" | "brand";
+}) {
+  const hover =
+    tone === "danger"
+      ? "hover:bg-danger/10 hover:text-danger"
+      : tone === "warning"
+        ? "hover:bg-warning/10 hover:text-warning"
+        : tone === "brand"
+          ? "hover:bg-brand/10 hover:text-brand"
+          : "hover:bg-primary/5 hover:text-foreground";
+  return (
+    <button title={title} onClick={onClick} className={`size-7 grid place-items-center rounded-md text-muted-foreground ${hover}`}>
+      {children}
+    </button>
+  );
+}
+
+function WriteOffModal({
+  invoice,
+  onClose,
+  onDone,
+}: {
+  invoice: InvoiceView | null;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [reason, setReason] = useState("");
+  const [amount, setAmount] = useState("");
+  const mut = useMutation({
+    mutationFn: () =>
+      writeOffInvoice({
+        data: { id: invoice!.id, reason, amount: amount ? Number(amount) : undefined },
+      }),
+    onSuccess: () => {
+      onDone();
+      onClose();
+      setReason("");
+      setAmount("");
+    },
+  });
+
+  return (
+    <Modal
+      open={!!invoice}
+      onClose={onClose}
+      title="Write off"
+      subtitle={invoice ? `${invoice.number} · balance ${fmt(invoice.balance, 2)}` : ""}
+    >
+      {invoice ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            mut.mutate();
+          }}
+          className="space-y-4"
+        >
+          <Field label="Write-off amount (₹)" hint={`Leave blank to write off the full balance of ${fmt(invoice.balance, 2)}.`}>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              max={invoice.balance}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={String(invoice.balance)}
+              className={inputCls}
+            />
+          </Field>
+          <Field label="Reason *">
+            <textarea required value={reason} onChange={(e) => setReason(e.target.value)} className={textareaCls} />
+          </Field>
+          {mut.isError ? (
+            <div className="text-sm text-danger bg-danger/10 rounded-lg px-3 py-2">{(mut.error as Error).message}</div>
+          ) : null}
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-primary/10 text-sm font-semibold hover:bg-muted">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={mut.isPending}
+              className="h-9 px-4 rounded-lg bg-warning text-white text-sm font-semibold hover:bg-warning/90 disabled:opacity-60"
+            >
+              {mut.isPending ? "Writing off…" : "Confirm write-off"}
+            </button>
+          </div>
+        </form>
+      ) : null}
+    </Modal>
+  );
+}
+
+function ConvertModal({
+  invoice,
+  onClose,
+  onDone,
+  router,
+}: {
+  invoice: InvoiceView | null;
+  onClose: () => void;
+  onDone: () => void;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const [number, setNumber] = useState("");
+  const mut = useMutation({
+    mutationFn: () => convertProforma({ data: { id: invoice!.id, number } }),
+    onSuccess: () => {
+      onDone();
+      onClose();
+      setNumber("");
+      router.invalidate();
+    },
+  });
+
+  return (
+    <Modal
+      open={!!invoice}
+      onClose={onClose}
+      title="Generate Invoice from Proforma"
+      subtitle={invoice ? `Proforma ${invoice.number} · settled ${fmt(invoice.paid, 2)}` : ""}
+    >
+      {invoice ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            mut.mutate();
+          }}
+          className="space-y-4"
+        >
+          <div className="text-sm text-muted-foreground">
+            This proforma is fully settled. Assign a tax-invoice number to convert it into a proper invoice. The
+            settled amount ({fmt(invoice.paid, 2)}) and history are retained.
+          </div>
+          <Field label="New invoice number *">
+            <input required value={number} onChange={(e) => setNumber(e.target.value)} placeholder="INV-0001" className={inputCls} />
+          </Field>
+          {mut.isError ? (
+            <div className="text-sm text-danger bg-danger/10 rounded-lg px-3 py-2">{(mut.error as Error).message}</div>
+          ) : null}
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-primary/10 text-sm font-semibold hover:bg-muted">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={mut.isPending}
+              className="h-9 px-4 rounded-lg bg-brand text-brand-foreground text-sm font-semibold hover:bg-brand/90 disabled:opacity-60"
+            >
+              {mut.isPending ? "Generating…" : "Generate invoice"}
+            </button>
+          </div>
+        </form>
+      ) : null}
+    </Modal>
   );
 }
