@@ -1,0 +1,6 @@
+name = "cash-flow-commander"
+main = ".output/server/index.mjs"
+compatibility_date = "2026-07-16"
+
+[vars]
+NODE_ENV = "production"
