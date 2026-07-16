@@ -1,6 +1,26 @@
 name = "cash-flow-commander"
 main = ".output/server/index.mjs"
+base_dir = ".output/server"
 compatibility_date = "2026-07-16"
+compatibility_flags = ["nodejs_compat"]
+no_bundle = true
+
+[assets]
+binding = "ASSETS"
+directory = ".output/public"
 
 [vars]
 NODE_ENV = "production"
+
+# Secrets are NOT set here — they'd be committed in plaintext. Use:
+#   npx wrangler secret put MONGODB_URI
+#   npx wrangler secret put MONGODB_DB
+#   npx wrangler secret put STORAGE_DRIVER
+#   npx wrangler secret put CLOUDINARY_CLOUD_NAME
+#   npx wrangler secret put CLOUDINARY_API_KEY
+#   npx wrangler secret put CLOUDINARY_API_SECRET
+
+[[rules]]
+type = "ESModule"
+globs = ["**/*.mjs", "**/*.js"]
+
