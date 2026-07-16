@@ -4,6 +4,7 @@
 // same interface later and be selected via STORAGE_DRIVER without touching callers.
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { CloudinaryStorage } from "./storage-cloudinary";
 
 export interface StoredFile {
   /** Path stored in the DB, relative to the storage root, POSIX-style. */
@@ -84,8 +85,11 @@ let instance: Storage | undefined;
 
 export function getStorage(): Storage {
   if (!instance) {
-    // Future: switch on process.env.STORAGE_DRIVER === "s3" etc.
-    instance = new LocalDiskStorage();
+    if ((process.env.STORAGE_DRIVER ?? "local").toLowerCase() === "cloudinary") {
+      instance = new CloudinaryStorage();
+    } else {
+      instance = new LocalDiskStorage();
+    }
   }
   return instance;
 }
