@@ -9,38 +9,365 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WriteoffsRouteImport } from './routes/writeoffs'
+import { Route as WorkspaceRouteImport } from './routes/workspace'
+import { Route as StatementRouteImport } from './routes/statement'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SettlementsRouteImport } from './routes/settlements'
+import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as FollowupsRouteImport } from './routes/followups'
+import { Route as DisputesRouteImport } from './routes/disputes'
+import { Route as ClientsRouteImport } from './routes/clients'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
+import { Route as AgingRouteImport } from './routes/aging'
+import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettlementsPartialRouteImport } from './routes/settlements.partial'
+import { Route as PaymentsNewRouteImport } from './routes/payments.new'
+import { Route as PaymentsAllocateRouteImport } from './routes/payments.allocate'
+import { Route as InvoicesIdRouteImport } from './routes/invoices.$id'
+import { Route as ClientsIdRouteImport } from './routes/clients.$id'
 
+const WriteoffsRoute = WriteoffsRouteImport.update({
+  id: '/writeoffs',
+  path: '/writeoffs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceRoute = WorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatementRoute = StatementRouteImport.update({
+  id: '/statement',
+  path: '/statement',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettlementsRoute = SettlementsRouteImport.update({
+  id: '/settlements',
+  path: '/settlements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FollowupsRoute = FollowupsRouteImport.update({
+  id: '/followups',
+  path: '/followups',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DisputesRoute = DisputesRouteImport.update({
+  id: '/disputes',
+  path: '/disputes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientsRoute = ClientsRouteImport.update({
+  id: '/clients',
+  path: '/clients',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgingRoute = AgingRouteImport.update({
+  id: '/aging',
+  path: '/aging',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivityRoute = ActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettlementsPartialRoute = SettlementsPartialRouteImport.update({
+  id: '/partial',
+  path: '/partial',
+  getParentRoute: () => SettlementsRoute,
+} as any)
+const PaymentsNewRoute = PaymentsNewRouteImport.update({
+  id: '/payments/new',
+  path: '/payments/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentsAllocateRoute = PaymentsAllocateRouteImport.update({
+  id: '/payments/allocate',
+  path: '/payments/allocate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvoicesIdRoute = InvoicesIdRouteImport.update({
+  id: '/invoices/$id',
+  path: '/invoices/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientsIdRoute = ClientsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ClientsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
+  '/aging': typeof AgingRoute
+  '/analytics': typeof AnalyticsRoute
+  '/clients': typeof ClientsRouteWithChildren
+  '/disputes': typeof DisputesRoute
+  '/followups': typeof FollowupsRoute
+  '/inbox': typeof InboxRoute
+  '/reports': typeof ReportsRoute
+  '/settlements': typeof SettlementsRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/statement': typeof StatementRoute
+  '/workspace': typeof WorkspaceRoute
+  '/writeoffs': typeof WriteoffsRoute
+  '/clients/$id': typeof ClientsIdRoute
+  '/invoices/$id': typeof InvoicesIdRoute
+  '/payments/allocate': typeof PaymentsAllocateRoute
+  '/payments/new': typeof PaymentsNewRoute
+  '/settlements/partial': typeof SettlementsPartialRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
+  '/aging': typeof AgingRoute
+  '/analytics': typeof AnalyticsRoute
+  '/clients': typeof ClientsRouteWithChildren
+  '/disputes': typeof DisputesRoute
+  '/followups': typeof FollowupsRoute
+  '/inbox': typeof InboxRoute
+  '/reports': typeof ReportsRoute
+  '/settlements': typeof SettlementsRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/statement': typeof StatementRoute
+  '/workspace': typeof WorkspaceRoute
+  '/writeoffs': typeof WriteoffsRoute
+  '/clients/$id': typeof ClientsIdRoute
+  '/invoices/$id': typeof InvoicesIdRoute
+  '/payments/allocate': typeof PaymentsAllocateRoute
+  '/payments/new': typeof PaymentsNewRoute
+  '/settlements/partial': typeof SettlementsPartialRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
+  '/aging': typeof AgingRoute
+  '/analytics': typeof AnalyticsRoute
+  '/clients': typeof ClientsRouteWithChildren
+  '/disputes': typeof DisputesRoute
+  '/followups': typeof FollowupsRoute
+  '/inbox': typeof InboxRoute
+  '/reports': typeof ReportsRoute
+  '/settlements': typeof SettlementsRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/statement': typeof StatementRoute
+  '/workspace': typeof WorkspaceRoute
+  '/writeoffs': typeof WriteoffsRoute
+  '/clients/$id': typeof ClientsIdRoute
+  '/invoices/$id': typeof InvoicesIdRoute
+  '/payments/allocate': typeof PaymentsAllocateRoute
+  '/payments/new': typeof PaymentsNewRoute
+  '/settlements/partial': typeof SettlementsPartialRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/activity'
+    | '/aging'
+    | '/analytics'
+    | '/clients'
+    | '/disputes'
+    | '/followups'
+    | '/inbox'
+    | '/reports'
+    | '/settlements'
+    | '/sitemap.xml'
+    | '/statement'
+    | '/workspace'
+    | '/writeoffs'
+    | '/clients/$id'
+    | '/invoices/$id'
+    | '/payments/allocate'
+    | '/payments/new'
+    | '/settlements/partial'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/activity'
+    | '/aging'
+    | '/analytics'
+    | '/clients'
+    | '/disputes'
+    | '/followups'
+    | '/inbox'
+    | '/reports'
+    | '/settlements'
+    | '/sitemap.xml'
+    | '/statement'
+    | '/workspace'
+    | '/writeoffs'
+    | '/clients/$id'
+    | '/invoices/$id'
+    | '/payments/allocate'
+    | '/payments/new'
+    | '/settlements/partial'
+  id:
+    | '__root__'
+    | '/'
+    | '/activity'
+    | '/aging'
+    | '/analytics'
+    | '/clients'
+    | '/disputes'
+    | '/followups'
+    | '/inbox'
+    | '/reports'
+    | '/settlements'
+    | '/sitemap.xml'
+    | '/statement'
+    | '/workspace'
+    | '/writeoffs'
+    | '/clients/$id'
+    | '/invoices/$id'
+    | '/payments/allocate'
+    | '/payments/new'
+    | '/settlements/partial'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ActivityRoute: typeof ActivityRoute
+  AgingRoute: typeof AgingRoute
+  AnalyticsRoute: typeof AnalyticsRoute
+  ClientsRoute: typeof ClientsRouteWithChildren
+  DisputesRoute: typeof DisputesRoute
+  FollowupsRoute: typeof FollowupsRoute
+  InboxRoute: typeof InboxRoute
+  ReportsRoute: typeof ReportsRoute
+  SettlementsRoute: typeof SettlementsRouteWithChildren
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StatementRoute: typeof StatementRoute
+  WorkspaceRoute: typeof WorkspaceRoute
+  WriteoffsRoute: typeof WriteoffsRoute
+  InvoicesIdRoute: typeof InvoicesIdRoute
+  PaymentsAllocateRoute: typeof PaymentsAllocateRoute
+  PaymentsNewRoute: typeof PaymentsNewRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/writeoffs': {
+      id: '/writeoffs'
+      path: '/writeoffs'
+      fullPath: '/writeoffs'
+      preLoaderRoute: typeof WriteoffsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace': {
+      id: '/workspace'
+      path: '/workspace'
+      fullPath: '/workspace'
+      preLoaderRoute: typeof WorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/statement': {
+      id: '/statement'
+      path: '/statement'
+      fullPath: '/statement'
+      preLoaderRoute: typeof StatementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settlements': {
+      id: '/settlements'
+      path: '/settlements'
+      fullPath: '/settlements'
+      preLoaderRoute: typeof SettlementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/followups': {
+      id: '/followups'
+      path: '/followups'
+      fullPath: '/followups'
+      preLoaderRoute: typeof FollowupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disputes': {
+      id: '/disputes'
+      path: '/disputes'
+      fullPath: '/disputes'
+      preLoaderRoute: typeof DisputesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clients': {
+      id: '/clients'
+      path: '/clients'
+      fullPath: '/clients'
+      preLoaderRoute: typeof ClientsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aging': {
+      id: '/aging'
+      path: '/aging'
+      fullPath: '/aging'
+      preLoaderRoute: typeof AgingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activity': {
+      id: '/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof ActivityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +375,86 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settlements/partial': {
+      id: '/settlements/partial'
+      path: '/partial'
+      fullPath: '/settlements/partial'
+      preLoaderRoute: typeof SettlementsPartialRouteImport
+      parentRoute: typeof SettlementsRoute
+    }
+    '/payments/new': {
+      id: '/payments/new'
+      path: '/payments/new'
+      fullPath: '/payments/new'
+      preLoaderRoute: typeof PaymentsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payments/allocate': {
+      id: '/payments/allocate'
+      path: '/payments/allocate'
+      fullPath: '/payments/allocate'
+      preLoaderRoute: typeof PaymentsAllocateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invoices/$id': {
+      id: '/invoices/$id'
+      path: '/invoices/$id'
+      fullPath: '/invoices/$id'
+      preLoaderRoute: typeof InvoicesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clients/$id': {
+      id: '/clients/$id'
+      path: '/$id'
+      fullPath: '/clients/$id'
+      preLoaderRoute: typeof ClientsIdRouteImport
+      parentRoute: typeof ClientsRoute
+    }
   }
 }
 
+interface ClientsRouteChildren {
+  ClientsIdRoute: typeof ClientsIdRoute
+}
+
+const ClientsRouteChildren: ClientsRouteChildren = {
+  ClientsIdRoute: ClientsIdRoute,
+}
+
+const ClientsRouteWithChildren =
+  ClientsRoute._addFileChildren(ClientsRouteChildren)
+
+interface SettlementsRouteChildren {
+  SettlementsPartialRoute: typeof SettlementsPartialRoute
+}
+
+const SettlementsRouteChildren: SettlementsRouteChildren = {
+  SettlementsPartialRoute: SettlementsPartialRoute,
+}
+
+const SettlementsRouteWithChildren = SettlementsRoute._addFileChildren(
+  SettlementsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActivityRoute: ActivityRoute,
+  AgingRoute: AgingRoute,
+  AnalyticsRoute: AnalyticsRoute,
+  ClientsRoute: ClientsRouteWithChildren,
+  DisputesRoute: DisputesRoute,
+  FollowupsRoute: FollowupsRoute,
+  InboxRoute: InboxRoute,
+  ReportsRoute: ReportsRoute,
+  SettlementsRoute: SettlementsRouteWithChildren,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StatementRoute: StatementRoute,
+  WorkspaceRoute: WorkspaceRoute,
+  WriteoffsRoute: WriteoffsRoute,
+  InvoicesIdRoute: InvoicesIdRoute,
+  PaymentsAllocateRoute: PaymentsAllocateRoute,
+  PaymentsNewRoute: PaymentsNewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
