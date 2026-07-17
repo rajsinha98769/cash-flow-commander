@@ -1,7 +1,23 @@
 // Server-only MongoDB access. Never import this from client components — it is
 // only referenced inside server-function handlers, which the bundler strips
 // from the client build.
-import { MongoClient, ObjectId, type Db, type Collection, type Document } from "mongodb";
+// Type-only import: fully erased at compile time, so it does NOT evaluate the
+// mongodb module. The runtime driver is loaded lazily via loadMongo() below.
+import type { Db, Collection, Document, MongoClient, ObjectId } from "mongodb";
+
+// WHY the dynamic import: bson (a mongodb dep) has a `static {}` initializer on
+// ObjectId that calls randomBytes() at MODULE-EVALUATION time. Cloudflare
+// Workers forbid generating random values in global scope, so a static
+// `import ... from "mongodb"` (evaluated at worker startup) throws
+// "Disallowed operation called within global scope" and every route 500s.
+// Importing the driver lazily via `import()` from inside a request handler makes
+// bson evaluate in request scope, where RNG is allowed.
+type MongoModule = typeof import("mongodb");
+let mongoMod: MongoModule | undefined;
+async function loadMongo(): Promise<MongoModule> {
+  if (!mongoMod) mongoMod = await import("mongodb");
+  return mongoMod;
+}
 
 // IMPORTANT: read env inside functions, NOT at module top level. On Cloudflare
 // Workers, secrets are only bridged onto process.env per-request (inside the
@@ -20,8 +36,9 @@ const globalForMongo = globalThis as unknown as {
   __mongoConnect?: Promise<MongoClient>;
 };
 
-function client(): Promise<MongoClient> {
+async function client(): Promise<MongoClient> {
   if (!globalForMongo.__mongoConnect) {
+    const { MongoClient } = await loadMongo();
     // Workers is a stateless, per-request runtime: keep the pool tiny and fail
     // server selection fast so errors surface instead of hanging past the limit.
     const c =
@@ -75,8 +92,13 @@ export function serializeMany<T extends { id: string }>(docs: MongoDoc<T>[]): T[
   return docs.map((d) => serialize<T>(d)!);
 }
 
+// Synchronous by design: every server function awaits collection()/getDb()
+// (which calls loadMongo()) before converting ids, so the driver is always
+// cached by the time this runs. Guarded so misuse fails loudly rather than
+// silently constructing a broken id.
 export function toObjectId(id: string): ObjectId {
-  return new ObjectId(id);
+  if (!mongoMod) {
+    throw new Error("MongoDB driver not loaded yet — await getDb()/collection() first.");
+  }
+  return new mongoMod.ObjectId(id);
 }
-
-export { ObjectId };

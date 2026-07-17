@@ -77,7 +77,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient; user: User | null }>()({
   beforeLoad: async ({ location }) => {
-    const user = await me();
+    let user: User | null;
+    try {
+      user = await me();
+    } catch (e) {
+      // TEMP DIAGNOSTIC: surface the real error that h3 otherwise swallows into a 500.
+      console.error(
+        "[beforeLoad] me() failed:",
+        e instanceof Error ? (e.stack ?? e.message) : JSON.stringify(e),
+      );
+      throw e;
+    }
     if (!user && location.pathname !== "/login") {
       throw redirect({ to: "/login", search: { redirect: location.pathname } });
     }

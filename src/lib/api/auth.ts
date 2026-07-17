@@ -34,6 +34,12 @@ export const logout = createServerFn({ method: "POST" }).handler(
 
 export const me = createServerFn({ method: "GET" }).handler(
   async (): Promise<User | null> => {
-    return getSessionUser();
+    try {
+      return await getSessionUser();
+    } catch (e) {
+      // TEMP DIAGNOSTIC: surface the real error that h3 otherwise swallows.
+      console.error("[me] getSessionUser threw:", e instanceof Error ? (e.stack ?? e.message) : String(e));
+      throw e;
+    }
   },
 );
